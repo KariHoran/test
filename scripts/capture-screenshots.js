@@ -9,7 +9,7 @@ async function main() {
   await page.goto("http://localhost:3000/companies", { waitUntil: "networkidle" });
   await page.screenshot({ path: path.join(outDir, "01-all-companies.png"), fullPage: true });
 
-  await page.goto("http://localhost:3000/companies?q=Маяк", { waitUntil: "networkidle" });
+  await page.goto("http://localhost:3000/companies?q=Аврора", { waitUntil: "networkidle" });
   await page.waitForTimeout(500);
   await page.screenshot({ path: path.join(outDir, "02-search-mayak.png"), fullPage: true });
 
