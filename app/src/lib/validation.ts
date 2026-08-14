@@ -34,3 +34,17 @@ export function statusLabel(status: ValidationStatus): string {
       return "не проверен";
   }
 }
+
+export function isOutreachReady(c: {
+  is_decision_maker: boolean;
+  email_status: string;
+  phone_status: string;
+  email: string | null;
+}): boolean {
+  return (
+    c.is_decision_maker &&
+    c.email_status === "valid" &&
+    c.phone_status === "valid" &&
+    !isGenericEmailLocal(c.email ?? "")
+  );
+}

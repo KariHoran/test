@@ -7,6 +7,8 @@ import {
   getContactsByCompany,
   isGenericEmail,
 } from "@/lib/contacts";
+import { isOutreachReady } from "@/lib/validation";
+import { getCategoryPainPoint } from "@/lib/personalization";
 import styles from "../companies.module.css";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +29,7 @@ export default async function CompanyDetailPage({ params }: PageProps) {
   const lprContacts = contacts.filter(
     (c) => c.is_decision_maker && c.email_status !== "invalid" && !isGenericEmail(c.email)
   );
+  const painPoint = getCategoryPainPoint(company.category);
 
   return (
     <div className={styles.page}>
@@ -34,7 +37,14 @@ export default async function CompanyDetailPage({ params }: PageProps) {
         <p className={styles.backLink}>
           <Link href="/companies">← К каталогу</Link>
         </p>
-        <h1>{company.name}</h1>
+        <h1>
+          {company.name}
+          {company.reviews_count > 50 && (
+            <span className={styles.tagPopular} style={{ marginLeft: "0.5rem" }}>
+              популярная
+            </span>
+          )}
+        </h1>
         <p>
           {company.category ?? "—"} · {company.city ?? "—"}
         </p>
@@ -74,6 +84,15 @@ export default async function CompanyDetailPage({ params }: PageProps) {
         </dl>
       </section>
 
+      {company.category && (
+        <section className={styles.painPointBox}>
+          <h2>Подсказка по нише</h2>
+          <p>
+            <strong>{company.category}</strong> — типичная «боль»: {painPoint}
+          </p>
+        </section>
+      )}
+
       <section className={styles.detailSection}>
         <h2>
           Контакты ЛПР{" "}
@@ -98,11 +117,13 @@ export default async function CompanyDetailPage({ params }: PageProps) {
                   <th>Телефон</th>
                   <th>Телефон ✓</th>
                   <th>Тип</th>
+                  <th>Аутрич</th>
                 </tr>
               </thead>
               <tbody>
                 {contacts.map((c) => {
                   const generic = isGenericEmail(c.email);
+                  const ready = isOutreachReady(c);
                   return (
                     <tr
                       key={c.id}
@@ -134,6 +155,13 @@ export default async function CompanyDetailPage({ params }: PageProps) {
                           <span className={styles.tagLpr}>ЛПР</span>
                         ) : generic || c.email_status === "invalid" ? (
                           <span className={styles.tagMuted}>мусорный</span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td>
+                        {ready ? (
+                          <span className={styles.tagReady}>готов</span>
                         ) : (
                           "—"
                         )}

@@ -187,3 +187,34 @@
 .detailValue {
   color: #111;
 }
+
+.previewBox {
+  padding: 1rem 1.25rem;
+  background: #e8f4fd;
+  border: 1px solid #b3d9f2;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.previewText {
+  margin: 0.35rem 0 0;
+  font-size: 0.9375rem;
+  color: #333;
+}
+
+.previewMuted {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.multiSelectSection {
+  margin: 1rem 0;
+}
+
+.multiSelectLabel {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #444;
+}

@@ -9,13 +9,14 @@ interface Props {
   cities: string[];
   categories: string[];
   initialQ: string;
-  initialCity: string;
-  initialCategory: string;
+  initialCities: string[];
+  initialCategories: string[];
   initialMinRating: string;
   initialMinReviews: string;
   initialHasWebsite: string;
   initialTitles: string[];
   initialLprOnly: boolean;
+  initialValidLprOnly: boolean;
   initialSort: string;
   initialOrder: string;
 }
@@ -24,13 +25,14 @@ export default function CompaniesFilters({
   cities,
   categories,
   initialQ,
-  initialCity,
-  initialCategory,
+  initialCities,
+  initialCategories,
   initialMinRating,
   initialMinReviews,
   initialHasWebsite,
   initialTitles,
   initialLprOnly,
+  initialValidLprOnly,
   initialSort,
   initialOrder,
 }: Props) {
@@ -38,49 +40,84 @@ export default function CompaniesFilters({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [q, setQ] = useState(initialQ);
+  const [selectedCities, setSelectedCities] = useState<string[]>(initialCities);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategories);
   const [titles, setTitles] = useState<string[]>(initialTitles);
   const [lprOnly, setLprOnly] = useState(initialLprOnly);
+  const [validLprOnly, setValidLprOnly] = useState(initialValidLprOnly);
 
   useEffect(() => {
     setQ(initialQ);
+    setSelectedCities(initialCities);
+    setSelectedCategories(initialCategories);
     setTitles(initialTitles);
     setLprOnly(initialLprOnly);
-  }, [initialQ, initialTitles, initialLprOnly]);
+    setValidLprOnly(initialValidLprOnly);
+  }, [
+    initialQ,
+    initialCities,
+    initialCategories,
+    initialTitles,
+    initialLprOnly,
+    initialValidLprOnly,
+  ]);
 
   const buildUpdates = useCallback(
     (overrides: Partial<{
       q: string;
-      city: string;
-      category: string;
+      cities: string[];
+      categories: string[];
       minRating: string;
       minReviews: string;
       hasWebsite: string;
       titles: string[];
       lprOnly: boolean;
+      validLprOnly: boolean;
       sort: string;
       order: string;
     }> = {}) => {
+      const nextCities = overrides.cities ?? selectedCities;
+      const nextCategories = overrides.categories ?? selectedCategories;
       const nextTitles = overrides.titles ?? titles;
       const nextLprOnly = overrides.lprOnly ?? lprOnly;
+      const nextValidLprOnly = overrides.validLprOnly ?? validLprOnly;
+
+      const cityParam =
+        nextCities.length === 1
+          ? nextCities[0]
+          : nextCities.length > 1
+            ? nextCities.join(",")
+            : "";
+      const categoryParam =
+        nextCategories.length === 1
+          ? nextCategories[0]
+          : nextCategories.length > 1
+            ? nextCategories.join(",")
+            : "";
+
       return {
         q: overrides.q ?? q,
-        city: overrides.city ?? initialCity,
-        category: overrides.category ?? initialCategory,
+        city: nextCities.length === 1 ? cityParam : "",
+        cities: nextCities.length > 1 ? cityParam : "",
+        category: nextCategories.length === 1 ? categoryParam : "",
+        categories: nextCategories.length > 1 ? categoryParam : "",
         minRating: overrides.minRating ?? initialMinRating,
         minReviews: overrides.minReviews ?? initialMinReviews,
         hasWebsite: overrides.hasWebsite ?? initialHasWebsite,
         titles: nextTitles.length ? nextTitles.join(",") : "",
         lprOnly: nextLprOnly ? "true" : "",
+        validLprOnly: nextValidLprOnly ? "true" : "",
         sort: overrides.sort ?? initialSort,
         order: overrides.order ?? initialOrder,
       };
     },
     [
       q,
+      selectedCities,
+      selectedCategories,
       titles,
       lprOnly,
-      initialCity,
-      initialCategory,
+      validLprOnly,
       initialMinRating,
       initialMinReviews,
       initialHasWebsite,
@@ -92,6 +129,10 @@ export default function CompaniesFilters({
   const pushParams = useCallback(
     (updates: Record<string, string>) => {
       const params = new URLSearchParams(searchParams.toString());
+
+      for (const key of ["city", "cities", "category", "categories"]) {
+        params.delete(key);
+      }
 
       for (const [key, value] of Object.entries(updates)) {
         if (value.trim()) params.set(key, value.trim());
@@ -121,6 +162,22 @@ export default function CompaniesFilters({
     pushParams(buildUpdates({ [key]: value } as Parameters<typeof buildUpdates>[0]));
   };
 
+  const toggleCity = (city: string) => {
+    const next = selectedCities.includes(city)
+      ? selectedCities.filter((c) => c !== city)
+      : [...selectedCities, city];
+    setSelectedCities(next);
+    pushParams(buildUpdates({ cities: next }));
+  };
+
+  const toggleCategory = (cat: string) => {
+    const next = selectedCategories.includes(cat)
+      ? selectedCategories.filter((c) => c !== cat)
+      : [...selectedCategories, cat];
+    setSelectedCategories(next);
+    pushParams(buildUpdates({ categories: next }));
+  };
+
   const toggleTitle = (value: string) => {
     const next = titles.includes(value)
       ? titles.filter((t) => t !== value)
@@ -135,10 +192,19 @@ export default function CompaniesFilters({
     pushParams(buildUpdates({ lprOnly: next }));
   };
 
+  const toggleValidLprOnly = () => {
+    const next = !validLprOnly;
+    setValidLprOnly(next);
+    pushParams(buildUpdates({ validLprOnly: next }));
+  };
+
   const handleReset = () => {
     setQ("");
+    setSelectedCities([]);
+    setSelectedCategories([]);
     setTitles([]);
     setLprOnly(false);
+    setValidLprOnly(false);
     startTransition(() => {
       router.push("/companies");
     });
@@ -159,44 +225,14 @@ export default function CompaniesFilters({
       </div>
 
       <div className={styles.filters} aria-busy={isPending}>
-        <label>
-          Ключевые слова
+        <label className={styles.fullWidth}>
+          Ключевые слова (название, категория, адрес)
           <input
             type="search"
             placeholder="Название, категория, адрес…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-        </label>
-
-        <label>
-          Город
-          <select
-            value={initialCity}
-            onChange={(e) => handleSelectChange("city", e.target.value)}
-          >
-            <option value="">Все города</option>
-            {cities.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Категория / индустрия
-          <select
-            value={initialCategory}
-            onChange={(e) => handleSelectChange("category", e.target.value)}
-          >
-            <option value="">Все категории</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
         </label>
 
         <label>
@@ -207,8 +243,8 @@ export default function CompaniesFilters({
           >
             <option value="">Любой</option>
             <option value="3.5">от 3.5</option>
-            <option value="4.0">от 4.0</option>
-            <option value="4.5">от 4.5</option>
+            <option value="4.0">4.0+</option>
+            <option value="4.5">4.5+</option>
             <option value="4.8">от 4.8</option>
           </select>
         </label>
@@ -220,7 +256,7 @@ export default function CompaniesFilters({
             onChange={(e) => handleSelectChange("minReviews", e.target.value)}
           >
             <option value="">Любое</option>
-            <option value="10">от 10</option>
+            <option value="10">от 10 (активные)</option>
             <option value="50">от 50</option>
             <option value="100">от 100</option>
             <option value="200">от 200</option>
@@ -263,6 +299,38 @@ export default function CompaniesFilters({
         </label>
       </div>
 
+      <div className={styles.multiFilterSection}>
+        <span className={styles.multiFilterLabel}>Города (можно несколько)</span>
+        <div className={styles.chipGroup}>
+          {cities.map((city) => (
+            <label key={city} className={styles.chipLabel}>
+              <input
+                type="checkbox"
+                checked={selectedCities.includes(city)}
+                onChange={() => toggleCity(city)}
+              />
+              {city}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.multiFilterSection}>
+        <span className={styles.multiFilterLabel}>Категории (ИЛИ)</span>
+        <div className={styles.chipGroup}>
+          {categories.map((cat) => (
+            <label key={cat} className={styles.chipLabel}>
+              <input
+                type="checkbox"
+                checked={selectedCategories.includes(cat)}
+                onChange={() => toggleCategory(cat)}
+              />
+              {cat}
+            </label>
+          ))}
+        </div>
+      </div>
+
       <div className={styles.lprFilters}>
         <span className={styles.lprFiltersLabel}>Должности ЛПР:</span>
         {LPR_TITLE_OPTIONS.map((opt) => (
@@ -278,6 +346,10 @@ export default function CompaniesFilters({
         <label className={styles.lprCheckbox}>
           <input type="checkbox" checked={lprOnly} onChange={toggleLprOnly} />
           Только с прямыми ЛПР
+        </label>
+        <label className={styles.lprCheckbox}>
+          <input type="checkbox" checked={validLprOnly} onChange={toggleValidLprOnly} />
+          Есть валидный ЛПР
         </label>
       </div>
     </div>

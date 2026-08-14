@@ -7,20 +7,24 @@ import { icpCriteriaToSearchParams } from "@/lib/icp-types";
 
 function parseCriteria(formData: FormData): IcpCriteria {
   const titles = formData.getAll("titles").map(String).filter(Boolean);
+  const cities = formData.getAll("cities").map(String).filter(Boolean);
+  const categories = formData.getAll("categories").map(String).filter(Boolean);
   const minRatingRaw = String(formData.get("minRating") ?? "");
   const minReviewsRaw = String(formData.get("minReviews") ?? "");
   const hasWebsiteRaw = String(formData.get("hasWebsite") ?? "");
 
   return {
     q: String(formData.get("q") ?? "").trim() || undefined,
-    city: String(formData.get("city") ?? "").trim() || undefined,
-    category: String(formData.get("category") ?? "").trim() || undefined,
+    cities: cities.length > 0 ? cities : undefined,
+    categories: categories.length > 0 ? categories : undefined,
     minRating: minRatingRaw ? parseFloat(minRatingRaw) : undefined,
     minReviews: minReviewsRaw ? parseInt(minReviewsRaw, 10) : undefined,
     hasWebsite:
       hasWebsiteRaw === "true" ? true : hasWebsiteRaw === "false" ? false : undefined,
     titles: titles.length > 0 ? titles : undefined,
     decisionMakersOnly: formData.get("decisionMakersOnly") === "on",
+    validLprOnly: formData.get("validLprOnly") === "on",
+    activeOnly: formData.get("activeOnly") === "on",
   };
 }
 

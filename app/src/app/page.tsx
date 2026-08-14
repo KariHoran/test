@@ -8,7 +8,8 @@ export default function Home() {
         <div className={styles.intro}>
           <h1>Каталог компаний</h1>
           <p>
-            Тестовое задание: поиск по ICP-критериям, контакты ЛПР, валидация и экспорт в CSV.
+            Поиск по ICP-критериям, контакты ЛПР, валидация, дашборд качества и экспорт в CSV
+            с сегментацией и персонализацией.
           </p>
         </div>
         <div className={styles.ctas}>
@@ -17,6 +18,9 @@ export default function Home() {
           </Link>
           <Link className={styles.secondary} href="/companies">
             Открыть каталог
+          </Link>
+          <Link className={styles.secondary} href="/stats">
+            Качество базы
           </Link>
           <Link className={styles.secondary} href="/icp">
             Мои ICP-профили

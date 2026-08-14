@@ -9,6 +9,7 @@ export default function Nav() {
       </Link>
       <div className={styles.links}>
         <Link href="/companies">Каталог</Link>
+        <Link href="/stats">Качество базы</Link>
         <Link href="/icp">ICP-профили</Link>
         <Link href="/export/review">Экспорт</Link>
         <Link href="/icp/new" className={styles.cta}>

@@ -1,4 +1,5 @@
 import { createIcpAction } from "./actions";
+import IcpPreview from "./IcpPreview";
 import { LPR_TITLE_OPTIONS } from "@/lib/icp-types";
 import styles from "./icp.module.css";
 
@@ -9,7 +10,9 @@ interface Props {
 
 export default function IcpForm({ cities, categories }: Props) {
   return (
-    <form action={createIcpAction} className={styles.form}>
+    <form id="icp-form" action={createIcpAction} className={styles.form}>
+      <IcpPreview formId="icp-form" />
+
       <div className={styles.formSection}>
         <h2>1. Название профиля</h2>
         <div className={styles.formGrid}>
@@ -32,35 +35,41 @@ export default function IcpForm({ cities, categories }: Props) {
             Ключевые слова
             <input type="text" name="q" placeholder="Название, категория, адрес…" />
           </label>
-          <label>
-            Город
-            <select name="city" defaultValue="">
-              <option value="">Любой</option>
-              {cities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Категория / индустрия
-            <select name="category" defaultValue="">
-              <option value="">Любая</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </label>
+        </div>
+
+        <div className={styles.multiSelectSection}>
+          <span className={styles.multiSelectLabel}>Города (можно несколько)</span>
+          <div className={styles.checkboxGroup}>
+            {cities.map((city) => (
+              <label key={city} className={styles.checkboxLabel}>
+                <input type="checkbox" name="cities" value={city} />
+                {city}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.multiSelectSection}>
+          <span className={styles.multiSelectLabel}>Категории (можно несколько, ИЛИ)</span>
+          <div className={styles.checkboxGroup}>
+            {categories.map((cat) => (
+              <label key={cat} className={styles.checkboxLabel}>
+                <input type="checkbox" name="categories" value={cat} />
+                {cat}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.formGrid}>
           <label>
             Мин. рейтинг
             <select name="minRating" defaultValue="">
               <option value="">Любой</option>
               <option value="3.5">от 3.5</option>
-              <option value="4.0">от 4.0</option>
-              <option value="4.5">от 4.5</option>
+              <option value="4.0">4.0+</option>
+              <option value="4.5">4.5+</option>
+              <option value="4.8">от 4.8</option>
             </select>
           </label>
           <label>
@@ -80,6 +89,10 @@ export default function IcpForm({ cities, categories }: Props) {
               <option value="false">Нет сайта</option>
             </select>
           </label>
+          <label className={styles.checkboxLabel}>
+            <input type="checkbox" name="activeOnly" />
+            Активные компании (10+ отзывов)
+          </label>
         </div>
       </div>
 
@@ -98,6 +111,10 @@ export default function IcpForm({ cities, categories }: Props) {
           <label className={styles.checkboxLabel}>
             <input type="checkbox" name="decisionMakersOnly" />
             Только компании с прямыми контактами ЛПР
+          </label>
+          <label className={styles.checkboxLabel}>
+            <input type="checkbox" name="validLprOnly" />
+            Только с валидным ЛПР (email valid)
           </label>
         </div>
       </div>

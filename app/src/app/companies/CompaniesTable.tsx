@@ -9,12 +9,25 @@ interface Props {
   companies: Company[];
   lprCounts: Record<number, number>;
   searchQs: string;
+  filterParams: Record<string, string>;
+  totalFiltered: number;
 }
 
-export default function CompaniesTable({ companies, lprCounts, searchQs }: Props) {
+export default function CompaniesTable({
+  companies,
+  lprCounts,
+  searchQs,
+  filterParams,
+  totalFiltered,
+}: Props) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selectAllLoading, setSelectAllLoading] = useState(false);
+  const [allByFilter, setAllByFilter] = useState<number[] | null>(null);
+
+  const effectiveSelected = allByFilter ?? [...selected];
 
   const toggleOne = useCallback((id: number) => {
+    setAllByFilter(null);
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -23,29 +36,66 @@ export default function CompaniesTable({ companies, lprCounts, searchQs }: Props
     });
   }, []);
 
-  const toggleAll = useCallback(() => {
+  const togglePage = useCallback(() => {
+    setAllByFilter(null);
     setSelected((prev) => {
       if (prev.size === companies.length) return new Set();
       return new Set(companies.map((c) => c.id));
     });
   }, [companies]);
 
+  const selectAllByFilter = async () => {
+    setSelectAllLoading(true);
+    try {
+      const qs = new URLSearchParams(filterParams).toString();
+      const res = await fetch(`/api/companies/ids?${qs}`);
+      const data = (await res.json()) as { ids: number[] };
+      setAllByFilter(data.ids);
+      setSelected(new Set());
+    } finally {
+      setSelectAllLoading(false);
+    }
+  };
+
+  const clearSelection = () => {
+    setAllByFilter(null);
+    setSelected(new Set());
+  };
+
+  const selectedIds = allByFilter ?? [...selected];
   const exportHref =
-    selected.size > 0
-      ? `/export/review?companies=${[...selected].join(",")}${searchQs ? `&${searchQs}` : ""}`
+    selectedIds.length > 0
+      ? `/export/review?companies=${selectedIds.join(",")}${searchQs ? `&${searchQs}` : ""}`
       : null;
 
-  const allSelected = companies.length > 0 && selected.size === companies.length;
+  const pageAllSelected =
+    !allByFilter && companies.length > 0 && selected.size === companies.length;
 
   return (
     <>
       <div className={styles.exportBar}>
         <label className={styles.selectAllLabel}>
-          <input type="checkbox" checked={allSelected} onChange={toggleAll} />
-          Выбрать все на странице
+          <input type="checkbox" checked={pageAllSelected} onChange={togglePage} />
+          Страница ({companies.length})
         </label>
+        <button
+          type="button"
+          className={styles.selectAllBtn}
+          onClick={selectAllByFilter}
+          disabled={selectAllLoading || totalFiltered === 0}
+        >
+          {selectAllLoading
+            ? "Загрузка…"
+            : `Все по фильтру (${totalFiltered})`}
+        </button>
+        {selectedIds.length > 0 && (
+          <button type="button" className={styles.clearBtn} onClick={clearSelection}>
+            Сбросить выбор
+          </button>
+        )}
         <span className={styles.exportCount}>
-          Выбрано компаний: <strong>{selected.size}</strong>
+          Выбрано: <strong>{selectedIds.length}</strong>
+          {allByFilter && " (весь фильтр)"}
         </span>
         {exportHref ? (
           <Link href={exportHref} className={styles.exportBtn}>
@@ -81,12 +131,13 @@ export default function CompaniesTable({ companies, lprCounts, searchQs }: Props
             ) : (
               companies.map((c) => {
                 const lprCount = lprCounts[c.id] ?? 0;
+                const isSelected = selectedIds.includes(c.id);
                 return (
-                  <tr key={c.id} className={selected.has(c.id) ? styles.rowSelected : undefined}>
+                  <tr key={c.id} className={isSelected ? styles.rowSelected : undefined}>
                     <td className={styles.checkCol}>
                       <input
                         type="checkbox"
-                        checked={selected.has(c.id)}
+                        checked={isSelected}
                         onChange={() => toggleOne(c.id)}
                         aria-label={`Выбрать ${c.name}`}
                       />
@@ -95,6 +146,11 @@ export default function CompaniesTable({ companies, lprCounts, searchQs }: Props
                       <Link href={`/companies/${c.id}`} className={styles.companyLink}>
                         {c.name}
                       </Link>
+                      {c.reviews_count > 50 && (
+                        <span className={styles.tagPopular} title="Много отзывов">
+                          популярная
+                        </span>
+                      )}
                     </td>
                     <td>{c.category ?? "—"}</td>
                     <td>{c.city ?? "—"}</td>

@@ -1,5 +1,7 @@
 import { getPool } from "./db";
-import { isGenericEmailLocal } from "./validation";
+import { isGenericEmailLocal, isOutreachReady } from "./validation";
+
+export { isOutreachReady };
 
 export interface Contact {
   id: number;
@@ -17,6 +19,15 @@ export interface Contact {
 export interface ExportContactRow extends Contact {
   company_name: string;
   company_city: string | null;
+  company_category: string | null;
+  company_rating: number | null;
+}
+
+export interface ExportOptions {
+  validOnly?: boolean;
+  validPhoneOnly?: boolean;
+  lprOnly?: boolean;
+  outreachReady?: boolean;
 }
 
 export function isGenericEmail(email: string | null): boolean {
@@ -67,23 +78,26 @@ export async function countContactsForCompanies(companyIds: number[]): Promise<M
   return new Map(rows.map((r) => [r.company_id, parseInt(r.count, 10)]));
 }
 
-export async function getContactsForExport(
-  companyIds: number[],
-  options: { validOnly?: boolean; lprOnly?: boolean } = {}
-): Promise<ExportContactRow[]> {
-  if (companyIds.length === 0) return [];
-  const pool = getPool();
+function buildExportConditions(options: ExportOptions): string[] {
   const conditions = ["ct.company_id = ANY($1::int[])"];
-  const values: unknown[] = [companyIds];
 
   if (options.lprOnly !== false) {
     conditions.push("ct.is_decision_maker = true");
   }
 
-  if (options.validOnly) {
+  if (options.outreachReady) {
+    conditions.push("ct.is_decision_maker = true");
     conditions.push("ct.email_status = 'valid'");
+    conditions.push("ct.phone_status = 'valid'");
   } else {
-    conditions.push("(ct.email_status IS NULL OR ct.email_status != 'invalid')");
+    if (options.validOnly) {
+      conditions.push("ct.email_status = 'valid'");
+    } else {
+      conditions.push("(ct.email_status IS NULL OR ct.email_status != 'invalid')");
+    }
+    if (options.validPhoneOnly) {
+      conditions.push("ct.phone_status = 'valid'");
+    }
   }
 
   conditions.push(`(ct.email IS NULL OR (
@@ -91,15 +105,31 @@ export async function getContactsForExport(
     ct.email NOT ILIKE 'contact@%' AND ct.email NOT ILIKE 'office@%'
   ))`);
 
+  return conditions;
+}
+
+const EXPORT_SELECT = `
+  SELECT ct.id, ct.company_id, ct.first_name, ct.last_name, ct.title,
+         ct.email, ct.phone, ct.is_decision_maker, ct.email_status, ct.phone_status,
+         co.name AS company_name, co.city AS company_city,
+         co.category AS company_category, co.rating AS company_rating
+  FROM contacts ct
+  JOIN companies co ON co.id = ct.company_id
+`;
+
+export async function getContactsForExport(
+  companyIds: number[],
+  options: ExportOptions = {}
+): Promise<ExportContactRow[]> {
+  if (companyIds.length === 0) return [];
+  const pool = getPool();
+  const conditions = buildExportConditions(options);
+
   const { rows } = await pool.query<ExportContactRow>(
-    `SELECT ct.id, ct.company_id, ct.first_name, ct.last_name, ct.title,
-            ct.email, ct.phone, ct.is_decision_maker, ct.email_status, ct.phone_status,
-            co.name AS company_name, co.city AS company_city
-     FROM contacts ct
-     JOIN companies co ON co.id = ct.company_id
+    `${EXPORT_SELECT}
      WHERE ${conditions.join(" AND ")}
      ORDER BY co.name, ct.is_decision_maker DESC, ct.title`,
-    values
+    [companyIds]
   );
   return rows;
 }
@@ -108,11 +138,7 @@ export async function getContactsByIds(ids: number[]): Promise<ExportContactRow[
   if (ids.length === 0) return [];
   const pool = getPool();
   const { rows } = await pool.query<ExportContactRow>(
-    `SELECT ct.id, ct.company_id, ct.first_name, ct.last_name, ct.title,
-            ct.email, ct.phone, ct.is_decision_maker, ct.email_status, ct.phone_status,
-            co.name AS company_name, co.city AS company_city
-     FROM contacts ct
-     JOIN companies co ON co.id = ct.company_id
+    `${EXPORT_SELECT}
      WHERE ct.id = ANY($1::int[])
      ORDER BY co.name, ct.title`,
     [ids]

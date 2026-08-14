@@ -16,12 +16,15 @@ export interface Company {
 export interface CompanySearchParams {
   q?: string;
   city?: string;
+  cities?: string[];
   category?: string;
+  categories?: string[];
   minRating?: number;
   minReviews?: number;
   hasWebsite?: boolean;
   titles?: string[];
   decisionMakersOnly?: boolean;
+  validLprOnly?: boolean;
   page?: number;
   sort?: "name" | "rating" | "reviews_count";
   order?: "asc" | "desc";
@@ -47,6 +50,17 @@ const GENERIC_EMAIL_FILTER = `(ct.email IS NULL OR (
   ct.email NOT ILIKE 'info@%' AND ct.email NOT ILIKE 'sales@%' AND
   ct.email NOT ILIKE 'contact@%' AND ct.email NOT ILIKE 'office@%'
 ))`;
+
+const VALID_LPR_EXISTS = `EXISTS (
+  SELECT 1 FROM contacts ct
+  WHERE ct.company_id = companies.id
+    AND ct.is_decision_maker = true
+    AND ct.email_status = 'valid'
+    AND (ct.email IS NULL OR (
+      ct.email NOT ILIKE 'info@%' AND ct.email NOT ILIKE 'sales@%' AND
+      ct.email NOT ILIKE 'contact@%' AND ct.email NOT ILIKE 'office@%'
+    ))
+)`;
 
 function buildContactExistsClause(titles?: string[], decisionMakersOnly?: boolean) {
   if (!titles?.length && !decisionMakersOnly) return null;
@@ -82,7 +96,7 @@ function buildContactExistsClause(titles?: string[], decisionMakersOnly?: boolea
   return `EXISTS (SELECT 1 FROM contacts ct WHERE ${parts.join(" AND ")})`;
 }
 
-function buildWhereClause(params: CompanySearchParams) {
+export function buildWhereClause(params: CompanySearchParams) {
   const conditions: string[] = [];
   const values: unknown[] = [];
 
@@ -94,14 +108,30 @@ function buildWhereClause(params: CompanySearchParams) {
     );
   }
 
-  if (params.city?.trim()) {
-    values.push(params.city.trim());
+  const cities = params.cities?.length
+    ? params.cities
+    : params.city?.trim()
+      ? [params.city.trim()]
+      : [];
+  if (cities.length === 1) {
+    values.push(cities[0]);
     conditions.push(`city = $${values.length}`);
+  } else if (cities.length > 1) {
+    values.push(cities);
+    conditions.push(`city = ANY($${values.length}::text[])`);
   }
 
-  if (params.category?.trim()) {
-    values.push(params.category.trim());
+  const categories = params.categories?.length
+    ? params.categories
+    : params.category?.trim()
+      ? [params.category.trim()]
+      : [];
+  if (categories.length === 1) {
+    values.push(categories[0]);
     conditions.push(`category = $${values.length}`);
+  } else if (categories.length > 1) {
+    values.push(categories);
+    conditions.push(`category = ANY($${values.length}::text[])`);
   }
 
   if (params.minRating != null && !Number.isNaN(params.minRating)) {
@@ -122,6 +152,10 @@ function buildWhereClause(params: CompanySearchParams) {
 
   const contactClause = buildContactExistsClause(params.titles, params.decisionMakersOnly);
   if (contactClause) conditions.push(contactClause);
+
+  if (params.validLprOnly) {
+    conditions.push(VALID_LPR_EXISTS);
+  }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   return { where, values };
@@ -158,6 +192,72 @@ export async function searchCompanies(
     page,
     pageSize: PAGE_SIZE,
     totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+  };
+}
+
+export async function getCompanyIdsBySearch(params: CompanySearchParams): Promise<number[]> {
+  const pool = getPool();
+  const { where, values } = buildWhereClause(params);
+  const { rows } = await pool.query<{ id: number }>(
+    `SELECT id FROM companies ${where} ORDER BY name ASC`,
+    values
+  );
+  return rows.map((r) => r.id);
+}
+
+export async function countCompaniesAndContacts(
+  params: CompanySearchParams
+): Promise<{ companies: number; contacts: number }> {
+  const pool = getPool();
+  const { where, values } = buildWhereClause(params);
+
+  const companyQuery = `SELECT COUNT(*)::int AS total FROM companies ${where}`;
+
+  const contactExtra: string[] = [
+    "(ct.email_status IS NULL OR ct.email_status != 'invalid')",
+    GENERIC_EMAIL_FILTER,
+  ];
+
+  if (params.decisionMakersOnly) {
+    contactExtra.push("ct.is_decision_maker = true");
+  }
+
+  if (params.titles?.length) {
+    const titlePatterns: Record<string, string[]> = {
+      CEO: ["%ceo%", "%генеральн%"],
+      HR: ["%hr%"],
+      Маркетинг: ["%маркетинг%"],
+      Продажи: ["%продаж%"],
+    };
+    const orClauses: string[] = [];
+    for (const title of params.titles) {
+      const patterns = titlePatterns[title] ?? [`%${title.toLowerCase()}%`];
+      for (const pattern of patterns) {
+        orClauses.push(`ct.title ILIKE '${pattern.replace(/'/g, "''")}'`);
+      }
+    }
+    contactExtra.push(`(${orClauses.join(" OR ")})`);
+  }
+
+  const contactWhere = where
+    ? `${where} AND ${contactExtra.join(" AND ")}`
+    : `WHERE ${contactExtra.join(" AND ")}`;
+
+  const contactQuery = `
+    SELECT COUNT(*)::int AS total
+    FROM contacts ct
+    INNER JOIN companies ON companies.id = ct.company_id
+    ${contactWhere}
+  `;
+
+  const [companyResult, contactResult] = await Promise.all([
+    pool.query<{ total: number }>(companyQuery, values),
+    pool.query<{ total: number }>(contactQuery, values),
+  ]);
+
+  return {
+    companies: companyResult.rows[0]?.total ?? 0,
+    contacts: contactResult.rows[0]?.total ?? 0,
   };
 }
 

@@ -444,3 +444,140 @@
   background: #f0f0f0;
   border-radius: 3px;
 }
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.multiFilterSection {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e5e5;
+}
+
+.multiFilterLabel {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #444;
+}
+
+.chipGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.chipLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.insightsBox {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  background: #f0f7ff;
+  border: 1px solid #cce0ff;
+  border-radius: 8px;
+}
+
+.insightsTitle {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.insightsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+
+.insightsList li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+}
+
+.insightsList a {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.insightsList span {
+  color: #888;
+  font-size: 0.8125rem;
+}
+
+.tagPopular {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #ede9fe;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+.selectAllBtn,
+.clearBtn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #0066cc;
+  background: #fff;
+  border: 1px solid #0066cc;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.clearBtn {
+  color: #666;
+  border-color: #ccc;
+}
+
+.selectAllBtn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.painPointBox {
+  margin-bottom: 2rem;
+  padding: 1rem 1.25rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+}
+
+.painPointBox h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.painPointBox p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #444;
+}
+
+.tagReady {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #0066cc;
+  background: #e8f4fd;
+  border-radius: 3px;
+}
