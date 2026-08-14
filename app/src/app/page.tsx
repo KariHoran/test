@@ -6,9 +6,9 @@ export default function Home() {
     <div className={styles.page}>
       <main className={styles.main}>
         <div className={styles.intro}>
-          <h1>DealRocket</h1>
+          <h1>Каталог компаний</h1>
           <p>
-            Поиск компаний по ICP-критериям, сбор контактов ЛПР и экспорт для аутрича.
+            Тестовое задание: поиск по ICP-критериям, контакты ЛПР, валидация и экспорт в CSV.
           </p>
         </div>
         <div className={styles.ctas}>

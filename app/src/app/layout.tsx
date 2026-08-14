@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DealRocket — Каталог компаний",
-  description: "Поиск компаний и контактов ЛПР",
+  title: "Каталог компаний",
+  description: "Поиск компаний, контакты ЛПР, валидация и экспорт",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

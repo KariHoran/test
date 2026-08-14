@@ -5,7 +5,7 @@ export default function Nav() {
   return (
     <nav className={styles.nav}>
       <Link href="/" className={styles.brand}>
-        DealRocket
+        Каталог компаний
       </Link>
       <div className={styles.links}>
         <Link href="/companies">Каталог</Link>

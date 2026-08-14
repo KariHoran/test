@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   );
 
   const csv = "\uFEFF" + [header.join(","), ...rows].join("\r\n");
-  const filename = `dealrocket-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  const filename = `contacts-export-${new Date().toISOString().slice(0, 10)}.csv`;
 
   return new NextResponse(csv, {
     headers: {
