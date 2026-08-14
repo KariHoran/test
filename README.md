@@ -10,7 +10,7 @@
 ├── app/                # Next.js App Router (страница /companies)
 ├── data_pack/          # page_001.json … page_020.json, review.csv
 ├── screenshots/        # скриншоты UI
-├── ANOMALIES.md        # аномалии в review.csv
+├── ANOMALIES.md        # аномалии в review.csv (37 пунктов)
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -24,14 +24,46 @@
 
 ## Быстрый старт
 
+### Запуск с нуля (Windows PowerShell)
+
+```powershell
+# из корня репозитория
+Copy-Item .env.example .env
+Copy-Item .env.example app\.env.local
+
+docker compose up -d
+Get-Content db\schema.sql | docker exec -i companies_postgres psql -U user -d companies_db
+
+Set-Location db
+npm install
+npm run load
+npm run load-reviews
+Set-Location ..
+
+Set-Location app
+npm install --registry https://registry.npmmirror.com   # если registry.npmjs.org тормозит
+npm run dev
+```
+
+Приложение: **http://localhost:3000/companies**
+
+---
+
 ### 1. Переменные окружения
 
+**Linux / macOS / Git Bash:**
 ```bash
 cp .env.example .env
 cp .env.example app/.env.local
 ```
 
-Файл `.env` уже в `.gitignore` — не коммитьте его.
+**Windows PowerShell:**
+```powershell
+Copy-Item .env.example .env
+Copy-Item .env.example app\.env.local
+```
+
+Файл `.env` в `.gitignore` — не коммитьте его.
 
 ### 2. PostgreSQL
 
@@ -43,9 +75,18 @@ docker compose up -d
 
 ### 3. Схема и загрузка компаний
 
+**Linux / macOS / Git Bash:**
 ```bash
 docker exec -i companies_postgres psql -U user -d companies_db < db/schema.sql
+```
 
+**Windows PowerShell** (оператор `<` не поддерживается):
+```powershell
+Get-Content db\schema.sql | docker exec -i companies_postgres psql -U user -d companies_db
+```
+
+Загрузка данных:
+```bash
 cd db
 npm install
 npm run load
@@ -54,10 +95,10 @@ npm run load
 Скрипт `load.ts`:
 - читает `data_pack/page_*.json`;
 - нормализует поля (`site` → `website`, телефон, рейтинг);
-- делает upsert с дедупликацией по `(name, address)`;
-- логирует статистику.
+- идемпотентный upsert: `ON CONFLICT (external_id) DO UPDATE`;
+- логирует: вставлено / обновлено / пропущено.
 
-**Адаптация под реальные данные:** в JSON поле сайта называется `site`, а не `website`; ID хранится в `id` (формат `c_000001`). Отдельные таблицы `categories` / `cities` не созданы — см. обоснование ниже.
+**Адаптация под реальные данные:** в JSON поле сайта — `site`, ID — `id` (формат `c_000001`).
 
 ### 4. Загрузка review.csv (анализ аномалий)
 
@@ -65,6 +106,8 @@ npm run load
 cd db
 npm run load-reviews
 ```
+
+Подробный отчёт: **[ANOMALIES.md](ANOMALIES.md)** — 37 аномалий с SQL-запросами и количеством записей.
 
 ### 5. Next.js
 
@@ -74,17 +117,30 @@ npm install
 npm run dev
 ```
 
-Откройте [http://localhost:3000/companies](http://localhost:3000/companies).
+Если `npm install` тормозит на `registry.npmjs.org`:
+```bash
+npm install --registry https://registry.npmmirror.com
+```
+
+Откройте **http://localhost:3000/companies**
 
 Параметры:
-- `?q=` — поиск по названию (debounce 300 ms на клиенте);
+- `?q=` — поиск по названию (debounce 300 ms);
 - `?city=` — фильтр по городу.
+
+## Статистика загруженных данных
+
+| Таблица     | Записей |
+|-------------|---------|
+| `companies` | **994** |
+| `reviews`   | **205** |
+
+Компании: 1000 записей в JSON → 994 уникальных (6 дублей по `(name, address)`).
+Повторный `npm run load` — идемпотентен (0 вставок, 1000 обновлений).
 
 ## SQL-запросы
 
 Файл: [`db/queries.sql`](db/queries.sql)
-
-Результаты (на данных после загрузки):
 
 **Топ-5 категорий:**
 
@@ -96,9 +152,7 @@ npm run dev
 | Строительная компания | 71            |
 | Юридические услуги    | 63            |
 
-**Средний рейтинг по городам (10+ отзывов)** — полная таблица в `queries.sql`.
-
-**Доля компаний с сайтом по категориям** — полная таблица в `queries.sql`.
+Полные результаты Query 2 и Query 3 — в [`db/queries.sql`](db/queries.sql).
 
 ## Скриншоты
 
@@ -108,19 +162,15 @@ npm run dev
 - `02-search-mayak.png` — поиск «Маяк»
 - `03-filter-moscow.png` — фильтр по городу «Москва»
 
-## Аномалии
-
-Подробный отчёт: [`ANOMALIES.md`](ANOMALIES.md)
-
 ## Проектирование схемы
 
 **Почему без отдельных таблиц `categories` и `cities`:**
 
-- категории и города — свободный текст без иерархии и доп. атрибутов;
-- объём ~1000 записей, нормализация не даёт выигрыша;
-- фильтрация через индексы по `city` и `category` достаточна.
+- категории и города — свободный текст без иерархии;
+- ~1000 записей, нормализация не даёт выигрыша;
+- индексы по `city` и `category` достаточны.
 
-**Дедупликация:** уникальный индекс `(name, address)` — естественный ключ для B2B-каталога; `external_id` также уникален, но при повторной загрузке без ID срабатывает `(name, address)`.
+**Дедупликация:** upsert по `external_id` (основной ключ из JSON); fallback `(name, address)` если ID отсутствует.
 
 ## Секреты
 

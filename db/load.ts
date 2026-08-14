@@ -108,9 +108,38 @@ async function main() {
 
   let readCount = 0;
   let insertedCount = 0;
-  let duplicateCount = 0;
+  let updatedCount = 0;
   let skippedInvalid = 0;
   let withMissingFields = 0;
+
+  // Upsert by external_id (stable key from JSON). DO UPDATE — повторный запуск
+  // обновляет данные из источника; DO NOTHING оставил бы устаревшие значения.
+  const upsertByExternalId = `
+    INSERT INTO companies (external_id, name, category, city, address, rating, reviews_count, website, phone)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    ON CONFLICT (external_id) DO UPDATE SET
+      name          = EXCLUDED.name,
+      category      = EXCLUDED.category,
+      city          = EXCLUDED.city,
+      address       = EXCLUDED.address,
+      rating        = EXCLUDED.rating,
+      reviews_count = EXCLUDED.reviews_count,
+      website       = EXCLUDED.website,
+      phone         = EXCLUDED.phone
+    RETURNING (xmax = 0) AS is_insert`;
+
+  // Fallback when external_id is missing — dedup by natural key (name, address)
+  const upsertByNameAddress = `
+    INSERT INTO companies (external_id, name, category, city, address, rating, reviews_count, website, phone)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    ON CONFLICT (name, address) DO UPDATE SET
+      category      = EXCLUDED.category,
+      city          = EXCLUDED.city,
+      rating        = EXCLUDED.rating,
+      reviews_count = EXCLUDED.reviews_count,
+      website       = EXCLUDED.website,
+      phone         = EXCLUDED.phone
+    RETURNING (xmax = 0) AS is_insert`;
 
   for (const file of files) {
     const content = await readFile(path.join(DATA_PACK, file), "utf-8");
@@ -131,28 +160,23 @@ async function main() {
 
       if (company.missingFields.length > 0) withMissingFields++;
 
-      const result = await pool.query(
-        `INSERT INTO companies (external_id, name, category, city, address, rating, reviews_count, website, phone)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         ON CONFLICT (name, address) DO NOTHING
-         RETURNING id`,
-        [
-          company.external_id,
-          company.name,
-          company.category,
-          company.city,
-          company.address,
-          company.rating,
-          company.reviews_count,
-          company.website,
-          company.phone,
-        ]
-      );
+      const sql = company.external_id ? upsertByExternalId : upsertByNameAddress;
+      const result = await pool.query(sql, [
+        company.external_id,
+        company.name,
+        company.category,
+        company.city,
+        company.address,
+        company.rating,
+        company.reviews_count,
+        company.website,
+        company.phone,
+      ]);
 
-      if (result.rowCount && result.rowCount > 0) {
+      if (result.rows[0]?.is_insert) {
         insertedCount++;
       } else {
-        duplicateCount++;
+        updatedCount++;
       }
     }
   }
@@ -161,7 +185,7 @@ async function main() {
   console.log("\n--- Статистика загрузки ---");
   console.log(`Прочитано записей:        ${readCount}`);
   console.log(`Вставлено:                ${insertedCount}`);
-  console.log(`Дублей пропущено:         ${duplicateCount}`);
+  console.log(`Обновлено (дубли):       ${updatedCount}`);
   console.log(`Пропущено (нет name):     ${skippedInvalid}`);
   console.log(`С пропущенными полями:    ${withMissingFields}`);
   console.log(`Всего в БД (COUNT):       ${rows[0].count}`);
