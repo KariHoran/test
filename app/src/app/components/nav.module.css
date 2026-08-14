@@ -1,0 +1,44 @@
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.5rem;
+  background: #111;
+  color: #fff;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: #fff;
+  text-decoration: none;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.links a {
+  color: #ccc;
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+
+.links a:hover {
+  color: #fff;
+}
+
+.cta {
+  padding: 0.35rem 0.75rem;
+  background: #0066cc;
+  color: #fff !important;
+  border-radius: 6px;
+}
+
+.cta:hover {
+  background: #0052a3;
+}

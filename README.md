@@ -1,20 +1,46 @@
-# Каталог компаний — тестовое задание
+# DealRocket — каталог компаний и аутрич
 
 Монорепо: PostgreSQL + скрипты загрузки (`/db`) и Next.js-приложение (`/app`).
+
+Платформа для поиска компаний по ICP-критериям, сбора контактов ЛПР, валидации и экспорта в CSV — по workflow DealRocket.
+
+## Возможности
+
+| Модуль | Описание |
+|--------|----------|
+| **Каталог** | Поиск по ключевым словам, фильтры (город, категория, рейтинг, отзывы, сайт), пагинация, сортировка |
+| **ICP-профили** | Сохранение критериев идеального клиента, запуск поиска одной кнопкой |
+| **Контакты ЛПР** | CEO, HR, маркетинг, продажи; исключение info@ / sales@ |
+| **Валидация** | Автопроверка email и телефонов (`valid` / `invalid` / `unknown`) |
+| **Экспорт** | Предпросмотр выборки → скачивание CSV для CRM |
 
 ## Структура
 
 ```
 /
-├── db/                 # schema.sql, load.ts, load-reviews.ts, queries.sql
-├── app/                # Next.js App Router (страница /companies)
+├── db/                 # schema.sql, load.ts, seed-contacts.ts, validate.ts
+├── app/                # Next.js App Router
 ├── data_pack/          # page_001.json … page_020.json, review.csv
 ├── screenshots/        # скриншоты UI
+├── scripts/            # capture-screenshots.js (Playwright)
 ├── ANOMALIES.md        # аномалии в review.csv (37 пунктов)
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
 ```
+
+## Маршруты приложения
+
+| URL | Описание |
+|-----|----------|
+| `/` | Главная |
+| `/companies` | Каталог с фильтрами и выбором для экспорта |
+| `/companies/[id]` | Карточка компании + контакты ЛПР |
+| `/icp` | Список ICP-профилей |
+| `/icp/new` | Создание ICP |
+| `/icp/[id]` | Детали ICP + «Запустить поиск» |
+| `/export/review` | Предпросмотр и скачивание CSV |
+| `/api/export?ids=…` | API экспорта CSV |
 
 ## Требования
 
@@ -38,6 +64,8 @@ Set-Location db
 npm install
 npm run load
 npm run load-reviews
+npm run seed-contacts
+npm run validate
 Set-Location ..
 
 Set-Location app
@@ -45,7 +73,14 @@ npm install --registry https://registry.npmmirror.com   # если registry.npmj
 npm run dev
 ```
 
-Приложение: **http://localhost:3000/companies**
+Приложение: **http://localhost:3000**
+
+### Workflow DealRocket
+
+1. **ICP** — `/icp/new`: задайте город, категорию, ключевые слова, должности ЛПР
+2. **Поиск** — «Запустить поиск» → каталог с фильтрами
+3. **Проверка** — выберите компании чекбоксами → «Предпросмотр экспорта»
+4. **Экспорт** — исключите лишние контакты, включите «Только валидные email» → «Скачать CSV»
 
 ---
 
@@ -73,43 +108,41 @@ docker compose up -d
 
 Параметры: `user` / `password`, база `companies_db`, порт `5432`.
 
-### 3. Схема и загрузка компаний
+### 3. Схема и загрузка данных
 
 **Linux / macOS / Git Bash:**
 ```bash
 docker exec -i companies_postgres psql -U user -d companies_db < db/schema.sql
 ```
 
-**Windows PowerShell** (оператор `<` не поддерживается):
+**Windows PowerShell:**
 ```powershell
 Get-Content db\schema.sql | docker exec -i companies_postgres psql -U user -d companies_db
 ```
 
-Загрузка данных:
 ```bash
 cd db
 npm install
-npm run load
+npm run load          # компании из JSON
+npm run load-reviews  # review.csv для анализа аномалий
+npm run seed-contacts # мок-контакты ЛПР (~2 на компанию)
+npm run validate      # проверка email/телефонов, статусы в БД
 ```
 
-Скрипт `load.ts`:
+**Скрипт `load.ts`:**
 - читает `data_pack/page_*.json`;
 - нормализует поля (`site` → `website`, телефон, рейтинг);
-- идемпотентный upsert: `ON CONFLICT (external_id) DO UPDATE`;
-- логирует: вставлено / обновлено / пропущено.
+- идемпотентный upsert: `ON CONFLICT (external_id) DO UPDATE`.
 
-**Адаптация под реальные данные:** в JSON поле сайта — `site`, ID — `id` (формат `c_000001`).
+**Скрипт `seed-contacts.ts`:**
+- генерирует контакты ЛПР (CEO, HR, маркетинг, продажи) для каждой компании;
+- ~20% записей — «мусорные» info@ / sales@ для демонстрации фильтрации.
 
-### 4. Загрузка review.csv (анализ аномалий)
+**Скрипт `validate.ts`:**
+- regex-проверка email, формат телефона;
+- обновляет `email_status`, `phone_status` у контактов и компаний.
 
-```bash
-cd db
-npm run load-reviews
-```
-
-Подробный отчёт: **[ANOMALIES.md](ANOMALIES.md)** — 37 аномалий с SQL-запросами и количеством записей.
-
-### 5. Next.js
+### 4. Next.js
 
 ```bash
 cd app
@@ -117,60 +150,69 @@ npm install
 npm run dev
 ```
 
-Если `npm install` тормозит на `registry.npmjs.org`:
+Параметры каталога (`/companies`):
+- `?q=` — ключевые слова (название, категория, адрес);
+- `?city=` — город;
+- `?category=` — индустрия;
+- `?minRating=` / `?minReviews=` — пороги;
+- `?hasWebsite=true|false` — наличие сайта;
+- `?titles=CEO,HR,Маркетинг` — должности ЛПР;
+- `?lprOnly=true` — только компании с прямыми ЛПР;
+- `?page=` / `?sort=` / `?order=` — пагинация и сортировка.
+
+### 5. Скриншоты
+
 ```bash
-npm install --registry https://registry.npmmirror.com
+# dev-сервер должен быть запущен на :3000
+node scripts/capture-screenshots.js
 ```
 
-Откройте **http://localhost:3000/companies**
+## Статистика данных
 
-Параметры:
-- `?q=` — поиск по названию (debounce 300 ms);
-- `?city=` — фильтр по городу.
+| Таблица       | Записей |
+|---------------|---------|
+| `companies`   | **994** |
+| `contacts`    | **~1978** (после seed-contacts) |
+| `icp_profiles`| по мере создания |
+| `reviews`     | **205** |
 
-## Статистика загруженных данных
+После `npm run validate`: ~1775 valid email, ~203 invalid (info@, sales@ и т.п.).
 
-| Таблица     | Записей |
-|-------------|---------|
-| `companies` | **994** |
-| `reviews`   | **205** |
+## Схема БД
 
-Компании: 1000 записей в JSON → 994 уникальных (6 дублей по `(name, address)`).
-Повторный `npm run load` — идемпотентен (0 вставок, 1000 обновлений).
+**`companies`** — каталог компаний (994 записи)
+
+**`contacts`** — контакты ЛПР:
+- `first_name`, `last_name`, `title`, `email`, `phone`
+- `is_decision_maker`, `email_status`, `phone_status`
+
+**`icp_profiles`** — сохранённые ICP:
+- `name`, `criteria` (JSONB: город, категория, keywords, titles, …)
+
+**`reviews`** — сырой review.csv для анализа аномалий ([ANOMALIES.md](ANOMALIES.md))
 
 ## SQL-запросы
 
 Файл: [`db/queries.sql`](db/queries.sql)
 
-**Топ-5 категорий:**
-
-| category              | company_count |
-|-----------------------|---------------|
-| IT-интегратор         | 94            |
-| Оптовая торговля      | 79            |
-| Рекламное агентство   | 76            |
-| Строительная компания | 71            |
-| Юридические услуги    | 63            |
-
-Полные результаты Query 2 и Query 3 — в [`db/queries.sql`](db/queries.sql).
-
 ## Скриншоты
 
 Папка [`screenshots/`](screenshots/):
 
-- `01-all-companies.png` — все компании (первые 100)
-- `02-search-mayak.png` — поиск «Маяк»
+- `01-all-companies.png` — каталог компаний
+- `02-search-avrora.png` — поиск «Аврора»
 - `03-filter-moscow.png` — фильтр по городу «Москва»
+- `04-icp-new.png` — создание ICP-профиля
+- `05-company-contacts.png` — карточка компании с контактами ЛПР
+- `06-export-review.png` — предпросмотр экспорта CSV
 
-## Проектирование схемы
+## Проектирование
 
-**Почему без отдельных таблиц `categories` и `cities`:**
+**Плоская схема** — категории и города без нормализации (~1000 записей, индексы достаточны).
 
-- категории и города — свободный текст без иерархии;
-- ~1000 записей, нормализация не даёт выигрыша;
-- индексы по `city` и `category` достаточны.
+**Мок-контакты** — в реальном DealRocket данные обогащаются API; здесь генерация из домена сайта компании.
 
-**Дедупликация:** upsert по `external_id` (основной ключ из JSON); fallback `(name, address)` если ID отсутствует.
+**Валидация** — rule-based (regex); в продакшене — ZeroBounce, Twilio Lookup.
 
 ## Секреты
 

@@ -63,6 +63,7 @@
 
 .ctas {
   display: flex;
+  flex-wrap: wrap;
   flex-direction: row;
   width: 100%;
   max-width: 440px;

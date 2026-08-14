@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Nav from "./components/Nav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,14 +14,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Каталог компаний",
-  description: "Поиск и фильтрация компаний",
+  title: "DealRocket — Каталог компаний",
+  description: "Поиск компаний и контактов ЛПР",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+    <html lang="ru" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body>
+        <Nav />
+        {children}
+      </body>
     </html>
   );
 }

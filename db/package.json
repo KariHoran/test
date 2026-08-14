@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "load": "tsx load.ts",
-    "load-reviews": "tsx load-reviews.ts"
+    "load-reviews": "tsx load-reviews.ts",
+    "seed-contacts": "tsx seed-contacts.ts",
+    "validate": "tsx validate.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.7",

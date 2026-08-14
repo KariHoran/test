@@ -15,11 +15,51 @@
   color: #555;
 }
 
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+.filtersWrap {
   margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  background: #f9f9f9;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+}
+
+.filtersHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.filtersTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.resetBtn {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #555;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.resetBtn:hover:not(:disabled) {
+  background: #f0f0f0;
+}
+
+.resetBtn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
 }
 
 .filters label {
@@ -32,11 +72,71 @@
 
 .filters input,
 .filters select {
-  min-width: 220px;
+  width: 100%;
   padding: 0.5rem 0.75rem;
   border: 1px solid #ccc;
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: 0.9375rem;
+  background: #fff;
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.paginationInfo {
+  font-size: 0.875rem;
+  color: #555;
+}
+
+.paginationLinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pageLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.875rem;
+  color: #0066cc;
+  text-decoration: none;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.pageLink:hover {
+  background: #f0f7ff;
+  border-color: #0066cc;
+}
+
+.pageLinkActive {
+  font-weight: 600;
+  color: #fff;
+  background: #0066cc;
+  border-color: #0066cc;
+}
+
+.pageLinkActive:hover {
+  background: #0052a3;
+  color: #fff;
+}
+
+.pageEllipsis {
+  padding: 0 0.25rem;
+  color: #888;
 }
 
 .tableWrap {
@@ -81,4 +181,266 @@
   text-align: center;
   color: #888;
   padding: 2rem !important;
+}
+
+.lprFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e5e5;
+}
+
+.lprFiltersLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #444;
+}
+
+.lprCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.companyLink {
+  color: #0066cc;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.companyLink:hover {
+  text-decoration: underline;
+}
+
+.lprBadge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #0a6640;
+  background: #e6f4ee;
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.lprBadge:hover {
+  background: #cce8db;
+}
+
+.lprNone {
+  color: #bbb;
+}
+
+.backLink {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+}
+
+.backLink a {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.detailSection {
+  margin-bottom: 2rem;
+}
+
+.detailSection h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+}
+
+.sectionHint {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.detailGrid dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.detailGrid dd {
+  margin: 0.25rem 0 0;
+  font-size: 0.9375rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #0a6640;
+  background: #e6f4ee;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.tagLpr {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #0a6640;
+  background: #e6f4ee;
+  border-radius: 3px;
+}
+
+.tagWarn {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #996600;
+  background: #fff3cd;
+  border-radius: 3px;
+}
+
+.tagMuted {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.6875rem;
+  color: #888;
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.rowMuted {
+  opacity: 0.65;
+}
+
+.emptyInline {
+  color: #888;
+  font-size: 0.9375rem;
+}
+
+.exportBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #f0f7ff;
+  border: 1px solid #cce0ff;
+  border-radius: 8px;
+}
+
+.selectAllLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.exportCount {
+  font-size: 0.875rem;
+  color: #555;
+}
+
+.exportBtn {
+  margin-left: auto;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  background: #0066cc;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.exportBtn:hover {
+  background: #0052a3;
+}
+
+.exportBtnDisabled {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  color: #999;
+}
+
+.exportBtnInline {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  background: #0066cc;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.exportBtnInline:hover {
+  background: #0052a3;
+}
+
+.detailActions {
+  margin-top: 1rem;
+}
+
+.headerLink {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.headerLink:hover {
+  text-decoration: underline;
+}
+
+.checkCol {
+  width: 2.5rem;
+  text-align: center;
+}
+
+.rowSelected {
+  background: #f0f7ff;
+}
+
+.statusValid {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #0a6640;
+  background: #e6f4ee;
+  border-radius: 3px;
+}
+
+.statusInvalid {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #991b1b;
+  background: #fee2e2;
+  border-radius: 3px;
+}
+
+.statusUnknown {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #666;
+  background: #f0f0f0;
+  border-radius: 3px;
 }
