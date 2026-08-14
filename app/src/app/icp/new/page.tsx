@@ -3,6 +3,8 @@ import { getCategories, getCities } from "@/lib/companies";
 import IcpForm from "../IcpForm";
 import styles from "../icp.module.css";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewIcpPage() {
   const [cities, categories] = await Promise.all([getCities(), getCategories()]);
 

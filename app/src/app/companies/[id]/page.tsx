@@ -9,6 +9,8 @@ import {
 } from "@/lib/contacts";
 import styles from "../companies.module.css";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }

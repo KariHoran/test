@@ -8,8 +8,14 @@ export function getPool(): pg.Pool {
   }
 
   if (!globalForPg.pgPool) {
+    const connectionString = process.env.DATABASE_URL;
+    const useSsl =
+      process.env.PGSSLMODE === "require" ||
+      /neon\.tech|supabase\.co|render\.com|railway\.app/.test(connectionString);
+
     globalForPg.pgPool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString,
+      ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
     });
   }
 

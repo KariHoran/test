@@ -13,6 +13,8 @@ import CompaniesTable from "./CompaniesTable";
 import Pagination from "./Pagination";
 import styles from "./companies.module.css";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   searchParams: Promise<{
     q?: string;

@@ -3,6 +3,8 @@ import { getContactsForExport } from "@/lib/contacts";
 import ExportReviewClient from "./ExportReviewClient";
 import styles from "./export.module.css";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   searchParams: Promise<{
     companies?: string;

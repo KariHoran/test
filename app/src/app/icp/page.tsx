@@ -4,6 +4,8 @@ import { icpCriteriaToSearchParams } from "@/lib/icp-types";
 import { deleteIcpAction, launchIcpSearchAction } from "./actions";
 import styles from "./icp.module.css";
 
+export const dynamic = "force-dynamic";
+
 function criteriaTags(criteria: Record<string, unknown>): string[] {
   const tags: string[] = [];
   if (criteria.q) tags.push(`Ключевые слова: ${criteria.q}`);

@@ -38,3 +38,5 @@ postgres_data/
 # Root-level tooling (screenshot script)
 /scripts/node_modules/
 /package-lock.json
+.vercel
+.env*

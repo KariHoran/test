@@ -5,6 +5,8 @@ import { icpCriteriaToSearchParams, LPR_TITLE_OPTIONS } from "@/lib/icp-types";
 import { deleteIcpAction, launchIcpSearchAction } from "../actions";
 import styles from "../icp.module.css";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
