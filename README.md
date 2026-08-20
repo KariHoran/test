@@ -1,95 +1,97 @@
 # ReelPulse
 
-Дашборд для блогеров: отслеживание Instagram Reels (просмотры, дата, обложка). Стек: **Next.js (App Router)**, **JavaScript**, **Postgres**, **Tailwind CSS**.
+Внутренний дашборд для блогеров digital-агентства: отслеживание Instagram Reels — просмотры, дата публикации и обложка. Данные подтягиваются через [Apify Instagram Scraper](https://apify.com/apify/instagram-scraper).
 
-## Быстрый старт (локально)
+## Посмотреть онлайн (без регистрации)
 
-Для дедлайна проще всего использовать **одну облачную Postgres-базу** (Vercel Postgres) и для dev, и для prod — данные не теряются между деплоями.
+**Прод:** https://test-vert-iota-16.vercel.app/login
 
-### 1. Postgres на Vercel
+На странице входа есть блок **«Быстрый вход (demo)»**:
 
-1. Создайте проект в [Vercel](https://vercel.com) и подключите репозиторий (или выполните `vercel link` локально).
-2. В **Dashboard → Storage → Create Database → Postgres** создайте базу и подключите к проекту.
-3. Локально подтяните переменные:
+| Кнопка | Что откроется |
+|--------|----------------|
+| **Анна** | Личный кабинет блогера — дашборд с 5 демо-роликами, график, метрики |
+| **Маша** | Личный кабинет блогера — 6 демо-роликов |
+| **👑 Админ** | Общая аналитика по всем блогерам агентства |
 
-```bash
-vercel env pull .env.local
-```
+Пароль не нужен. Можно также зарегистрировать свой аккаунт через форму «Зарегистрироваться».
 
-Vercel автоматически добавит `POSTGRES_URL` и связанные переменные.
+## Стек
 
-### 2. Запуск
+- **Next.js 15** (App Router), **JavaScript** (без TypeScript)
+- **Postgres** (Neon через Vercel) — чистый SQL через `pg`, без ORM
+- **Tailwind CSS v4**
+- **Apify API** — скрапинг метаданных Reels
+- **JWT-сессии** (httpOnly cookie + `jose`)
+- **Recharts** — график на дашборде
+- **Деплой:** Vercel
+
+## Функционал
+
+- **Личные кабинеты блогеров** — дашборд с метриками, графиком динамики просмотров, фильтром по периоду (неделя / месяц / всё время)
+- **Добавление Reels по ссылке** — автоматическое получение просмотров, даты и обложки через Apify
+- **Лента роликов** — режимы «сетка» и «таблица», поиск, сортировка, обновление и удаление
+- **Обработка ошибок** — если Apify не смог загрузить ролик, карточка переходит в статус `error` с кнопкой «Повторить»
+- **Аналитика для admin** — рейтинг блогеров, топ-5 роликов, сводные метрики
+- **Демо-режим** — предзаполненные аккаунты Анна / Маша / Админ с тестовыми данными
+- **Cron** — автоматическое обновление устаревших роликов (раз в сутки на бесплатном тарифе Vercel)
+
+## Как запустить локально
+
+### 1. Зависимости
 
 ```bash
 npm install
-npm run db:init    # создать таблицы в Postgres
-npm run db:seed    # демо-данные (Анна, Маша, Админ + ролики)
-npm run dev        # http://localhost:3000
 ```
 
-Добавьте в `.env.local` (или через `vercel env pull`):
+### 2. Переменные окружения
 
-```env
-POSTGRES_URL=postgres://...
-SESSION_SECRET=любая-длинная-случайная-строка-32plus
-CRON_SECRET=ещё-одна-случайная-строка
-```
+Скопируйте `.env.local.example` → `.env.local` и заполните:
 
-Для реального подтягивания Reels через Apify добавьте `APIFY_API_TOKEN`. Без него демо работает полностью на сид-данных.
+| Переменная | Обязательно | Откуда взять |
+|------------|-------------|--------------|
+| `POSTGRES_URL` | да | Vercel Dashboard → Storage → Neon → Connect, затем `vercel env pull .env.local` |
+| `SESSION_SECRET` | да | Случайная строка 32+ символов |
+| `CRON_SECRET` | для cron | Случайная строка 32+ символов |
+| `APIFY_API_TOKEN` | для живого Apify | [Apify Console → Integrations](https://console.apify.com/account/integrations) |
 
-## Быстрый вход (demo)
+> Проще всего для дедлайна использовать **ту же облачную Neon-базу**, что и на проде: `vercel link` → `vercel env pull .env.local`.
 
-На странице `/login` под формой есть блок **«Быстрый вход (demo)»** — три кнопки:
-
-| Кнопка | Куда ведёт | Что показывает |
-|--------|------------|----------------|
-| **Анна** | `/dashboard` | 5 демо-роликов, метрики по просмотрам |
-| **Маша** | `/dashboard` | 6 демо-роликов |
-| **Админ** | `/analytics` | рейтинг блогеров (Анна + Маша) с реальными цифрами из БД |
-
-Пароль не нужен — вход через `POST /api/auth/demo-login` только для пользователей с `is_demo = TRUE`.
-
-Повторный сид без дублей (обновляет только демо-аккаунты):
+### 3. База данных и демо-данные
 
 ```bash
-npm run db:seed
+node scripts/init-db.js    # создать таблицы
+node scripts/seed-demo.js  # демо-аккаунты Анна / Маша / Админ
 ```
 
-## Реальный Apify (опционально)
+### 4. Dev-сервер
 
-1. Получите токен на [Apify Console](https://console.apify.com/account/integrations)
-2. Добавьте в `.env.local` / Vercel env:
-
-```env
-APIFY_API_TOKEN=apify_api_...
+```bash
+npm run dev
 ```
 
-3. После входа (обычного или demo) кнопка **«+ Добавить Reels»** вызовет Apify и обновит карточку.
+Откройте http://localhost:3000/login
 
-## Деплой на Vercel
-
-1. Подключите репозиторий или `vercel link`
-2. Создайте **Vercel Postgres** в Storage и привяжите к проекту
-3. В **Settings → Environment Variables** задайте:
-
-| Переменная | Обязательно | Описание |
-|------------|-------------|----------|
-| `POSTGRES_URL` | да | автоматически из Vercel Postgres |
-| `SESSION_SECRET` | да | подпись JWT-сессий |
-| `APIFY_API_TOKEN` | нет | для живого скрапинга Reels |
-| `CRON_SECRET` | для cron | защита `/api/cron/refresh-reels` |
-
-4. Один раз прогоните сид на облачной базе: `npm run db:init && npm run db:seed`
-5. `vercel --prod` — при сборке `init-db.js` создаёт таблицы (идемпотентно)
-6. Cron настроен в `vercel.json` — обновление stale-роликов каждые 6 часов
-
-## Структура
+## Структура проекта
 
 ```
-app/           — страницы и API-роуты
-components/    — UI-компоненты
-lib/           — auth, db, apify, reels
-scripts/       — init-db.js, seed-demo.js
+app/
+  (protected)/     # страницы после входа: dashboard, feed, analytics, settings
+  api/             # REST API: auth, reels, cron
+  login/           # страница входа / регистрации
+components/        # UI: DashboardClient, FeedClient, ViewsChart, ReelCard…
+lib/
+  db.js            # Postgres pool + query-хелперы
+  schema.sql       # DDL таблиц
+  auth.js          # JWT-сессии
+  apify.js         # интеграция с Apify
+  reels.js         # SQL-запросы для роликов
+  chart-data.js    # агрегация данных для графика и фильтр по периоду
+scripts/
+  init-db.js       # применить схему
+  seed-demo.js     # демо-пользователи и ролики
+middleware.js      # защита роутов, редирект admin/blogger
+vercel.json        # cron-задача
 ```
 
 ## Скрипты
@@ -97,6 +99,30 @@ scripts/       — init-db.js, seed-demo.js
 | Команда | Действие |
 |---------|----------|
 | `npm run dev` | dev-сервер |
-| `npm run build` | схема БД + production-сборка |
-| `npm run db:init` | создать таблицы в Postgres |
-| `npm run db:seed` | демо-пользователи и ролики |
+| `npm run build` | init-db + seed-demo + production-сборка |
+| `npm run db:init` | создать/обновить таблицы |
+| `npm run db:seed` | наполнить демо-данными (идемпотентно) |
+
+## Проверка (smoke tests)
+
+После запуска dev-сервера или на проде:
+
+```bash
+BASE_URL=https://test-vert-iota-16.vercel.app node scripts/test-auth-flow.js
+BASE_URL=https://test-vert-iota-16.vercel.app node scripts/test-demo-flow.js
+BASE_URL=https://test-vert-iota-16.vercel.app node scripts/test-reels-flow.js
+```
+
+## Известные ограничения
+
+- **Apify на проде настроен**, но запрос может занять до 2 минут; для приватных, удалённых или несуществующих роликов карточка получит статус `error` — это ожидаемое поведение.
+- **Cron на Vercel Hobby** — не чаще одного раза в сутки (`0 0 * * *`), а не каждые 6 часов.
+- **Кнопка «Забыли пароль?»** — заглушка, восстановление пароля не реализовано.
+- **Neon free tier** — база может «засыпать» после простоя; первый запрос после паузы может быть медленнее.
+- **Демо-сид при каждом деплое** перезаписывает ролики демо-аккаунтов (Анна/Маша), но не трогает зарегистрированных пользователей.
+
+## Авторизация (кратко)
+
+- Регистрация / вход — email + пароль, сессия в httpOnly cookie (7 дней)
+- Защищённые роуты (`/dashboard`, `/feed`, `/settings`, `/analytics`) без сессии → редирект на `/login`
+- `/analytics` доступен только роли `admin`, блогер перенаправляется на `/dashboard`

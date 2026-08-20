@@ -4,6 +4,7 @@ import { useState } from "react";
 import AddReelsModal from "./AddReelsModal";
 import { ReelCardGrid, StatusBadge, getReelSlug } from "./ReelCard";
 import { formatDate, formatViews } from "@/lib/format.js";
+import { createTempReel, submitNewReel } from "@/lib/reel-client.js";
 
 export default function FeedClient({ initialReels }) {
   const [reels, setReels] = useState(initialReels);
@@ -13,36 +14,14 @@ export default function FeedClient({ initialReels }) {
   const [showAdd, setShowAdd] = useState(false);
 
   async function handleAddReel(instagramUrl) {
-    const tempId = `temp-${Date.now()}`;
-    setReels((prev) => [
-      {
-        id: tempId,
-        instagram_url: instagramUrl,
-        status: "updating",
-        views: 0,
-        cover_url: null,
-        published_at: null,
-        last_updated_at: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
+    const tempReel = createTempReel(instagramUrl);
+    setReels((prev) => [tempReel, ...prev]);
 
     try {
-      const res = await fetch("/api/reels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instagram_url: instagramUrl }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setReels((prev) => prev.filter((r) => r.id !== tempId));
-        throw new Error(data.error || data.reel?.error_message || "Не удалось добавить Reels");
-      }
-
-      setReels((prev) => [data.reel, ...prev.filter((r) => r.id !== tempId)]);
+      const { reel } = await submitNewReel(instagramUrl);
+      setReels((prev) => [reel, ...prev.filter((r) => r.id !== tempReel.id)]);
     } catch (error) {
-      setReels((prev) => prev.filter((r) => r.id !== tempId));
+      setReels((prev) => prev.filter((r) => r.id !== tempReel.id));
       throw error;
     }
   }

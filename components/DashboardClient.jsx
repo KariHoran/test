@@ -12,6 +12,7 @@ import {
   filterReelsByPeriod,
 } from "@/lib/chart-data.js";
 import { formatViews } from "@/lib/format.js";
+import { createTempReel, submitNewReel } from "@/lib/reel-client.js";
 
 const ViewsChart = dynamic(() => import("./ViewsChart"), { ssr: false });
 
@@ -45,37 +46,14 @@ export default function DashboardClient({ user, initialStats, initialReels }) {
   const recentReels = useMemo(() => filteredReels.slice(0, 3), [filteredReels]);
 
   async function handleAddReel(instagramUrl) {
-    const tempId = `temp-${Date.now()}`;
-
-    setReels((prev) => [
-      {
-        id: tempId,
-        instagram_url: instagramUrl,
-        status: "updating",
-        views: 0,
-        cover_url: null,
-        published_at: null,
-        last_updated_at: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
+    const tempReel = createTempReel(instagramUrl);
+    setReels((prev) => [tempReel, ...prev]);
 
     try {
-      const res = await fetch("/api/reels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instagram_url: instagramUrl }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setReels((prev) => prev.filter((r) => r.id !== tempId));
-        throw new Error(data.error || data.reel?.error_message || "Не удалось добавить Reels");
-      }
-
-      setReels((prev) => [data.reel, ...prev.filter((r) => r.id !== tempId)]);
+      const { reel } = await submitNewReel(instagramUrl);
+      setReels((prev) => [reel, ...prev.filter((r) => r.id !== tempReel.id)]);
     } catch (error) {
-      setReels((prev) => prev.filter((r) => r.id !== tempId));
+      setReels((prev) => prev.filter((r) => r.id !== tempReel.id));
       throw error;
     }
   }
@@ -171,14 +149,18 @@ export default function DashboardClient({ user, initialStats, initialReels }) {
         <div className="card p-10 md:p-12 flex flex-col items-center gap-4 text-center">
           <div className="text-5xl">🎬</div>
           <p className="text-lg font-bold" style={{ fontFamily: "var(--font-display)" }}>
-            {period === "all" ? "Пока нет роликов" : "Нет роликов за выбранный период"}
+            {reels.length === 0
+              ? "Пока нет роликов"
+              : period === "all"
+                ? "Пока нет роликов"
+                : "Нет роликов за выбранный период"}
           </p>
           <p className="text-sm max-w-sm" style={{ color: "var(--color-text-muted)" }}>
-            {period === "all"
+            {reels.length === 0 || period === "all"
               ? "Добавьте первый Reels и начните отслеживать просмотры"
               : "Попробуйте выбрать более длинный период или добавьте новый Reels"}
           </p>
-          {period === "all" && (
+          {(reels.length === 0 || period === "all") && (
             <button type="button" className="btn-primary" onClick={() => setShowAdd(true)}>
               <span aria-hidden>＋</span> Добавить первый Reels
             </button>
