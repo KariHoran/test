@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "ReelsHub — Аналитика Instagram Reels",
+  title: "ReelPulse — Аналитика Instagram Reels",
   description: "Дашборд для блогеров: отслеживание просмотров Reels в Instagram",
 };
 

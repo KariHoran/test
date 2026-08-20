@@ -1,4 +1,4 @@
-# ReelsHub
+# ReelPulse
 
 Дашборд для блогеров: отслеживание Instagram Reels (просмотры, дата, обложка). Стек: **Next.js (App Router)**, **JavaScript**, **Postgres**, **Tailwind CSS**.
 

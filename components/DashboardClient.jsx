@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import AddReelsModal from "./AddReelsModal";
 import MetricCard from "./MetricCard";
 import { ReelCardGrid } from "./ReelCard";
 import UserAvatar from "./UserAvatar";
-import { calculatePeriodGrowth } from "@/lib/chart-data.js";
+import {
+  calculatePeriodGrowth,
+  DASHBOARD_PERIODS,
+  filterReelsByPeriod,
+} from "@/lib/chart-data.js";
 import { formatViews } from "@/lib/format.js";
 
 const ViewsChart = dynamic(() => import("./ViewsChart"), { ssr: false });
@@ -25,29 +29,36 @@ function recalcStats(reels) {
 
 export default function DashboardClient({ user, initialStats, initialReels }) {
   const [reels, setReels] = useState(initialReels);
-  const [stats, setStats] = useState(initialStats);
+  const [period, setPeriod] = useState("month");
   const [showAdd, setShowAdd] = useState(false);
   const firstName = user.name.split(" ")[0];
+
+  const filteredReels = useMemo(
+    () => filterReelsByPeriod(reels, period),
+    [reels, period],
+  );
+  const stats = useMemo(() => recalcStats(filteredReels), [filteredReels]);
+  const periodGrowth = useMemo(
+    () => calculatePeriodGrowth(filteredReels),
+    [filteredReels],
+  );
+  const recentReels = useMemo(() => filteredReels.slice(0, 3), [filteredReels]);
 
   async function handleAddReel(instagramUrl) {
     const tempId = `temp-${Date.now()}`;
 
-    setReels((prev) => {
-      const next = [
-        {
-          id: tempId,
-          instagram_url: instagramUrl,
-          status: "updating",
-          views: 0,
-          cover_url: null,
-          published_at: null,
-          last_updated_at: new Date().toISOString(),
-        },
-        ...prev,
-      ];
-      setStats(recalcStats(next));
-      return next;
-    });
+    setReels((prev) => [
+      {
+        id: tempId,
+        instagram_url: instagramUrl,
+        status: "updating",
+        views: 0,
+        cover_url: null,
+        published_at: null,
+        last_updated_at: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
 
     try {
       const res = await fetch("/api/reels", {
@@ -58,52 +69,31 @@ export default function DashboardClient({ user, initialStats, initialReels }) {
       const data = await res.json();
 
       if (!res.ok) {
-        setReels((prev) => {
-          const next = prev.filter((r) => r.id !== tempId);
-          setStats(recalcStats(next));
-          return next;
-        });
+        setReels((prev) => prev.filter((r) => r.id !== tempId));
         throw new Error(data.error || data.reel?.error_message || "Не удалось добавить Reels");
       }
 
-      setReels((prev) => {
-        const next = [data.reel, ...prev.filter((r) => r.id !== tempId)];
-        setStats(recalcStats(next));
-        return next;
-      });
+      setReels((prev) => [data.reel, ...prev.filter((r) => r.id !== tempId)]);
     } catch (error) {
-      setReels((prev) => {
-        const next = prev.filter((r) => r.id !== tempId);
-        setStats(recalcStats(next));
-        return next;
-      });
+      setReels((prev) => prev.filter((r) => r.id !== tempId));
       throw error;
     }
   }
 
   async function handleRefresh(reelId) {
-    setReels((prev) => {
-      const next = prev.map((r) =>
+    setReels((prev) =>
+      prev.map((r) =>
         r.id === reelId ? { ...r, status: "updating", error_message: null } : r,
-      );
-      setStats(recalcStats(next));
-      return next;
-    });
+      ),
+    );
 
     const res = await fetch(`/api/reels/${reelId}`, { method: "PATCH" });
     const data = await res.json();
 
     if (data.reel) {
-      setReels((prev) => {
-        const next = prev.map((r) => (r.id === reelId ? data.reel : r));
-        setStats(recalcStats(next));
-        return next;
-      });
+      setReels((prev) => prev.map((r) => (r.id === reelId ? data.reel : r)));
     }
   }
-
-  const recentReels = reels.slice(0, 3);
-  const periodGrowth = calculatePeriodGrowth(reels);
 
   return (
     <div className="page-shell flex flex-col gap-5 md:gap-6 max-w-5xl mx-auto w-full">
@@ -116,8 +106,13 @@ export default function DashboardClient({ user, initialStats, initialReels }) {
           </div>
         </div>
         <div className="segment-control self-start sm:self-auto">
-          {["Неделя", "Месяц", "Всё время"].map((label, i) => (
-            <button key={label} type="button" className={`tab-btn ${i === 1 ? "active" : ""}`}>
+          {DASHBOARD_PERIODS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              className={`tab-btn ${period === id ? "active" : ""}`}
+              onClick={() => setPeriod(id)}
+            >
               {label}
             </button>
           ))}
@@ -137,7 +132,7 @@ export default function DashboardClient({ user, initialStats, initialReels }) {
           label="Средние просмотры"
           value={stats.avg_views ? formatViews(Math.round(stats.avg_views)) : "—"}
           icon="📊"
-          change={stats.avg_views > 0 ? 12 : null}
+          change={periodGrowth}
           color="coral"
         />
         <MetricCard
@@ -160,7 +155,7 @@ export default function DashboardClient({ user, initialStats, initialReels }) {
             </span>
           )}
         </div>
-        <ViewsChart reels={reels} />
+        <ViewsChart reels={filteredReels} />
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -176,14 +171,18 @@ export default function DashboardClient({ user, initialStats, initialReels }) {
         <div className="card p-10 md:p-12 flex flex-col items-center gap-4 text-center">
           <div className="text-5xl">🎬</div>
           <p className="text-lg font-bold" style={{ fontFamily: "var(--font-display)" }}>
-            Пока нет роликов
+            {period === "all" ? "Пока нет роликов" : "Нет роликов за выбранный период"}
           </p>
           <p className="text-sm max-w-sm" style={{ color: "var(--color-text-muted)" }}>
-            Добавьте первый Reels и начните отслеживать просмотры
+            {period === "all"
+              ? "Добавьте первый Reels и начните отслеживать просмотры"
+              : "Попробуйте выбрать более длинный период или добавьте новый Reels"}
           </p>
-          <button type="button" className="btn-primary" onClick={() => setShowAdd(true)}>
-            <span aria-hidden>＋</span> Добавить первый Reels
-          </button>
+          {period === "all" && (
+            <button type="button" className="btn-primary" onClick={() => setShowAdd(true)}>
+              <span aria-hidden>＋</span> Добавить первый Reels
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">

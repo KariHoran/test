@@ -24,7 +24,7 @@ export default function MobileHeader({ user }) {
             className="text-sm font-bold truncate leading-tight"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            ReelsHub
+            ReelPulse
           </p>
           <p className="text-[11px] truncate" style={{ color: "var(--color-text-muted)" }}>
             @{user.instagram_username}

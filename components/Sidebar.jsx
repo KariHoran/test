@@ -69,7 +69,7 @@ export default function Sidebar({ user }) {
             <span className="text-sm">✦</span>
           </div>
           <span className="text-lg font-extrabold" style={{ fontFamily: "var(--font-display)" }}>
-            ReelsHub
+            ReelPulse
           </span>
         </div>
 

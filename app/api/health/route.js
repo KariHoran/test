@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 export async function GET() {
   return NextResponse.json({
     status: "ok",
-    service: "reelshub",
+    service: "reelpulse",
     apify: process.env.APIFY_API_TOKEN ? "configured" : "not_configured",
   });
 }

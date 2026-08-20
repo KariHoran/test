@@ -47,7 +47,7 @@ export default function LoginPage() {
             <span className="text-2xl text-white">✦</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight" style={{ fontFamily: "var(--font-display)", color: "var(--color-text)" }}>
-            ReelsHub
+            ReelPulse
           </h1>
           <p className="text-sm mt-2 leading-relaxed max-w-xs mx-auto" style={{ color: "var(--color-text-muted)" }}>
             Аналитика Instagram Reels для вашего агентства
@@ -57,7 +57,7 @@ export default function LoginPage() {
         <AuthForm />
 
         <p className="text-center text-xs mt-6" style={{ color: "var(--color-text-subtle)" }}>
-          © 2026 ReelsHub · Все права защищены
+          © 2026 ReelPulse · Все права защищены
         </p>
       </div>
     </div>
