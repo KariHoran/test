@@ -1,220 +1,102 @@
-# Каталог компаний — тестовое задание
+# ReelsHub
 
-Монорепо: PostgreSQL + скрипты загрузки (`/db`) и Next.js-приложение (`/app`).
+Дашборд для блогеров: отслеживание Instagram Reels (просмотры, дата, обложка). Стек: **Next.js (App Router)**, **JavaScript**, **Postgres**, **Tailwind CSS**.
 
-Каталог компаний с поиском по ICP-критериям, контактами ЛПР, валидацией и экспортом в CSV.
+## Быстрый старт (локально)
 
-## Возможности
+Для дедлайна проще всего использовать **одну облачную Postgres-базу** (Vercel Postgres) и для dev, и для prod — данные не теряются между деплоями.
 
-| Модуль | Описание |
-|--------|----------|
-| **Каталог** | Поиск по ключевым словам, фильтры (город, категория, рейтинг, отзывы, сайт), пагинация, сортировка |
-| **ICP-профили** | Сохранение критериев идеального клиента, запуск поиска одной кнопкой |
-| **Контакты ЛПР** | CEO, HR, маркетинг, продажи; исключение info@ / sales@ |
-| **Валидация** | Автопроверка email и телефонов (`valid` / `invalid` / `unknown`) |
-| **Экспорт** | Предпросмотр выборки → скачивание CSV для CRM |
+### 1. Postgres на Vercel
+
+1. Создайте проект в [Vercel](https://vercel.com) и подключите репозиторий (или выполните `vercel link` локально).
+2. В **Dashboard → Storage → Create Database → Postgres** создайте базу и подключите к проекту.
+3. Локально подтяните переменные:
+
+```bash
+vercel env pull .env.local
+```
+
+Vercel автоматически добавит `POSTGRES_URL` и связанные переменные.
+
+### 2. Запуск
+
+```bash
+npm install
+npm run db:init    # создать таблицы в Postgres
+npm run db:seed    # демо-данные (Анна, Маша, Админ + ролики)
+npm run dev        # http://localhost:3000
+```
+
+Добавьте в `.env.local` (или через `vercel env pull`):
+
+```env
+POSTGRES_URL=postgres://...
+SESSION_SECRET=любая-длинная-случайная-строка-32plus
+CRON_SECRET=ещё-одна-случайная-строка
+```
+
+Для реального подтягивания Reels через Apify добавьте `APIFY_API_TOKEN`. Без него демо работает полностью на сид-данных.
+
+## Быстрый вход (demo)
+
+На странице `/login` под формой есть блок **«Быстрый вход (demo)»** — три кнопки:
+
+| Кнопка | Куда ведёт | Что показывает |
+|--------|------------|----------------|
+| **Анна** | `/dashboard` | 5 демо-роликов, метрики по просмотрам |
+| **Маша** | `/dashboard` | 6 демо-роликов |
+| **Админ** | `/analytics` | рейтинг блогеров (Анна + Маша) с реальными цифрами из БД |
+
+Пароль не нужен — вход через `POST /api/auth/demo-login` только для пользователей с `is_demo = TRUE`.
+
+Повторный сид без дублей (обновляет только демо-аккаунты):
+
+```bash
+npm run db:seed
+```
+
+## Реальный Apify (опционально)
+
+1. Получите токен на [Apify Console](https://console.apify.com/account/integrations)
+2. Добавьте в `.env.local` / Vercel env:
+
+```env
+APIFY_API_TOKEN=apify_api_...
+```
+
+3. После входа (обычного или demo) кнопка **«+ Добавить Reels»** вызовет Apify и обновит карточку.
+
+## Деплой на Vercel
+
+1. Подключите репозиторий или `vercel link`
+2. Создайте **Vercel Postgres** в Storage и привяжите к проекту
+3. В **Settings → Environment Variables** задайте:
+
+| Переменная | Обязательно | Описание |
+|------------|-------------|----------|
+| `POSTGRES_URL` | да | автоматически из Vercel Postgres |
+| `SESSION_SECRET` | да | подпись JWT-сессий |
+| `APIFY_API_TOKEN` | нет | для живого скрапинга Reels |
+| `CRON_SECRET` | для cron | защита `/api/cron/refresh-reels` |
+
+4. Один раз прогоните сид на облачной базе: `npm run db:init && npm run db:seed`
+5. `vercel --prod` — при сборке `init-db.js` создаёт таблицы (идемпотентно)
+6. Cron настроен в `vercel.json` — обновление stale-роликов каждые 6 часов
 
 ## Структура
 
 ```
-/
-├── db/                 # schema.sql, load.ts, seed-contacts.ts, validate.ts
-├── app/                # Next.js App Router
-├── data_pack/          # page_001.json … page_020.json, review.csv
-├── screenshots/        # скриншоты UI
-├── scripts/            # capture-screenshots.js (Playwright)
-├── ANOMALIES.md        # аномалии в review.csv (37 пунктов)
-├── docker-compose.yml
-├── .env.example
-└── README.md
+app/           — страницы и API-роуты
+components/    — UI-компоненты
+lib/           — auth, db, apify, reels
+scripts/       — init-db.js, seed-demo.js
 ```
 
-## Маршруты приложения
+## Скрипты
 
-| URL | Описание |
-|-----|----------|
-| `/` | Главная |
-| `/companies` | Каталог с фильтрами и выбором для экспорта |
-| `/companies/[id]` | Карточка компании + контакты ЛПР |
-| `/icp` | Список ICP-профилей |
-| `/icp/new` | Создание ICP |
-| `/icp/[id]` | Детали ICP + «Запустить поиск» |
-| `/export/review` | Предпросмотр и скачивание CSV |
-| `/api/export?ids=…` | API экспорта CSV |
-
-## Требования
-
-- Docker Desktop (PostgreSQL 16)
-- Node.js 20+
-- npm
-
-## Быстрый старт
-
-### Запуск с нуля (Windows PowerShell)
-
-```powershell
-# из корня репозитория
-Copy-Item .env.example .env
-Copy-Item .env.example app\.env.local
-
-docker compose up -d
-Get-Content db\schema.sql | docker exec -i companies_postgres psql -U user -d companies_db
-
-Set-Location db
-npm install
-npm run load
-npm run load-reviews
-npm run seed-contacts
-npm run validate
-Set-Location ..
-
-Set-Location app
-npm install --registry https://registry.npmmirror.com   # если registry.npmjs.org тормозит
-npm run dev
-```
-
-Приложение: **http://localhost:3000**
-
-### Сценарий работы
-
-1. **ICP** — `/icp/new`: задайте город, категорию, ключевые слова, должности ЛПР
-2. **Поиск** — «Запустить поиск» → каталог с фильтрами
-3. **Проверка** — выберите компании чекбоксами → «Предпросмотр экспорта»
-4. **Экспорт** — исключите лишние контакты, включите «Только валидные email» → «Скачать CSV»
-
----
-
-### 1. Переменные окружения
-
-**Linux / macOS / Git Bash:**
-```bash
-cp .env.example .env
-cp .env.example app/.env.local
-```
-
-**Windows PowerShell:**
-```powershell
-Copy-Item .env.example .env
-Copy-Item .env.example app\.env.local
-```
-
-Файл `.env` в `.gitignore` — не коммитьте его.
-
-### 2. PostgreSQL
-
-```bash
-docker compose up -d
-```
-
-Параметры: `user` / `password`, база `companies_db`, порт `5432`.
-
-### 3. Схема и загрузка данных
-
-**Linux / macOS / Git Bash:**
-```bash
-docker exec -i companies_postgres psql -U user -d companies_db < db/schema.sql
-```
-
-**Windows PowerShell:**
-```powershell
-Get-Content db\schema.sql | docker exec -i companies_postgres psql -U user -d companies_db
-```
-
-```bash
-cd db
-npm install
-npm run load          # компании из JSON
-npm run load-reviews  # review.csv для анализа аномалий
-npm run seed-contacts # мок-контакты ЛПР (~2 на компанию)
-npm run validate      # проверка email/телефонов, статусы в БД
-```
-
-**Скрипт `load.ts`:**
-- читает `data_pack/page_*.json`;
-- нормализует поля (`site` → `website`, телефон, рейтинг);
-- идемпотентный upsert: `ON CONFLICT (external_id) DO UPDATE`.
-
-**Скрипт `seed-contacts.ts`:**
-- генерирует контакты ЛПР (CEO, HR, маркетинг, продажи) для каждой компании;
-- ~20% записей — «мусорные» info@ / sales@ для демонстрации фильтрации.
-
-**Скрипт `validate.ts`:**
-- regex-проверка email, формат телефона;
-- обновляет `email_status`, `phone_status` у контактов и компаний.
-
-### 4. Next.js
-
-```bash
-cd app
-npm install
-npm run dev
-```
-
-Параметры каталога (`/companies`):
-- `?q=` — ключевые слова (название, категория, адрес);
-- `?city=` — город;
-- `?category=` — индустрия;
-- `?minRating=` / `?minReviews=` — пороги;
-- `?hasWebsite=true|false` — наличие сайта;
-- `?titles=CEO,HR,Маркетинг` — должности ЛПР;
-- `?lprOnly=true` — только компании с прямыми ЛПР;
-- `?page=` / `?sort=` / `?order=` — пагинация и сортировка.
-
-### 5. Скриншоты
-
-```bash
-# dev-сервер должен быть запущен на :3000
-node scripts/capture-screenshots.js
-```
-
-## Статистика данных
-
-| Таблица       | Записей |
-|---------------|---------|
-| `companies`   | **994** |
-| `contacts`    | **~1978** (после seed-contacts) |
-| `icp_profiles`| по мере создания |
-| `reviews`     | **205** |
-
-После `npm run validate`: ~1775 valid email, ~203 invalid (info@, sales@ и т.п.).
-
-## Схема БД
-
-**`companies`** — каталог компаний (994 записи)
-
-**`contacts`** — контакты ЛПР:
-- `first_name`, `last_name`, `title`, `email`, `phone`
-- `is_decision_maker`, `email_status`, `phone_status`
-
-**`icp_profiles`** — сохранённые ICP:
-- `name`, `criteria` (JSONB: город, категория, keywords, titles, …)
-
-**`reviews`** — сырой review.csv для анализа аномалий ([ANOMALIES.md](ANOMALIES.md))
-
-## SQL-запросы
-
-Файл: [`db/queries.sql`](db/queries.sql)
-
-## Скриншоты
-
-Папка [`screenshots/`](screenshots/):
-
-- `01-all-companies.png` — каталог компаний
-- `02-search-avrora.png` — поиск «Аврора»
-- `03-filter-moscow.png` — фильтр по городу «Москва»
-- `04-icp-new.png` — создание ICP-профиля
-- `05-company-contacts.png` — карточка компании с контактами ЛПР
-- `06-export-review.png` — предпросмотр экспорта CSV
-
-## Проектирование
-
-**Плоская схема** — категории и города без нормализации (~1000 записей, индексы достаточны).
-
-**Мок-контакты** — в продакшене данные обогащаются внешним API; здесь генерация из домена сайта компании.
-
-**Валидация** — rule-based (regex); в продакшене — ZeroBounce, Twilio Lookup.
-
-## Секреты
-
-- `DATABASE_URL` только в `.env` / `app/.env.local`
-- в репозитории — `.env.example` без реальных секретов
+| Команда | Действие |
+|---------|----------|
+| `npm run dev` | dev-сервер |
+| `npm run build` | схема БД + production-сборка |
+| `npm run db:init` | создать таблицы в Postgres |
+| `npm run db:seed` | демо-пользователи и ролики |

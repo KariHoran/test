@@ -1,0 +1,10 @@
+{
+  "description": "This dashboard empowers agency bloggers to track Instagram Reels metrics, displaying views, publication dates, and video covers for enhanced analytics.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

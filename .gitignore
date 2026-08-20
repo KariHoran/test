@@ -1,42 +1,25 @@
-# Dependencies
 node_modules/
-.pnp
-.pnp.js
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Build outputs
 dist/
 build/
+.cache/
+.env*
+!.env.local.example
 .next/
 out/
-
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# TypeScript
+dev.db
+dev.db-*
+.vite/
+vite.config.*.timestamp-*
 *.tsbuildinfo
+*-debug.log*
+logs/
+*.log
+.claude-replay.*
+.tmp-*
 
-# Docker volumes (local data)
-postgres_data/
-
-# Root-level tooling (screenshot script)
-/scripts/node_modules/
-/package-lock.json
-.vercel
-.env*
+# Platform-managed agentplat state, not project source. In the
+# client-initiated single-repo workspace layout (make's `Path: "."` spec) the
+# repo root IS the workspace root, so these land inside this repo rather than
+# beside it.
+/.plugins/
+/.opencode-skills/
